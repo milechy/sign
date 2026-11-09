@@ -68,7 +68,7 @@ rm certificate.p12
 
 ## 3. バックアップと復元
 - Supabase の日次自動バックアップ（プラン依存。契約プランで保持日数を確認）。
-- 週1回（月曜 03:00 JST）: `.github/workflows/mooore-backup.yml` が、暗号化した `pg_dump` と Storage の中身を Cloudflare R2 に書き出す。手動実行は Actions の "Run workflow"。R2 側に保持期限（例: 90日）のライフサイクルを設定する。
+- 週1回（月曜 03:00 JST）: `.github/workflows/mooore-backup.yml` が、暗号化した `pg_dump` と Storage の中身を Cloudflare R2 に書き出す。手動実行は Actions の "Run workflow"。バックアップ先は Cloudflare R2 のバケット `mooore-sign-backup`（2026-11-09 作成、非公開、APAC）。`db/` は90日で自動削除するルール `expire-db-dumps-90d` を設定済み。`files/`（契約書 PDF の複製）は7年保存の対象なので期限を付けない。R2 の接続先は `https://b6d518fc9ad3c51d71c39426f531b1e8.r2.cloudflarestorage.com`（`R2_ENDPOINT`。バケット名は含めない）。**ワークフローを手動実行するには、`.github/workflows/mooore-backup.yml` が既定ブランチ（main）に入っている必要がある**（PR をマージしたあと）。fork では、Actions タブで一度「ワークフローを有効にする」操作が要る。
 - 復元（検証用の空の DB に対して）:
 ```bash
 rclone copyto R2:<bucket>/db/db-YYYYMMDD.dump.enc ./db.dump.enc
