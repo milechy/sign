@@ -24,7 +24,7 @@
 | 署名済み PDF に署名証明書・監査ログを含める | **直した** | 組織の Preferences → Certificates で、証明書 = Yes（元から）、**監査ログ = No → Yes に変更**（チームは組織を引き継ぐ） |
 | ハッシュ値（SHA-256）を両者に送る | **足した** | Documenso は送らない。`ops/completion-worker.js` が、完了 Webhook を受けて署名済み PDF の SHA-256 を計算し、監査ログ PDF を添付して全員にメールする（テストあり）。**デプロイは未**（§6） |
 | 新規登録の停止 | 済 | `NEXT_PUBLIC_DISABLE_SIGNUP=true`。`/signup` は `/signin` へ転送、登録 API は 403 |
-| バックアップと復元の確認 | **直した・復元テストは未実行** | 週次ワークフローの不具合を2つ直した（`pg_dump` が 16 で Postgres 17 に失敗する／Supabase 管理スキーマが復元で衝突する）。復元テスト `ops/restore-test.sh` を用意。R2 と GitHub Secrets は未設定で、ワークフローも未実行（§3） |
+| バックアップと復元の確認 | **直した・復元テストは合格（ローカル復元まで）** | 週次ワークフローの不具合を2つ直した（`pg_dump` が 16 で Postgres 17 に失敗する／Supabase 管理スキーマが復元で衝突する）。復元テスト `ops/restore-test.sh` は合格（54テーブル一致）。R2 と GitHub Secrets は未設定で、週次ワークフローは未実行（§3） |
 | テンプレート7つ・PDF 生成・登録 | 未 | 元の文面（`templates/source/contracts.md`）が必要。着手前 |
 
 ### 環境変数（`.env.example` と指示書の名前の違い）
@@ -78,7 +78,7 @@ rclone copy R2:<bucket>/files <復元先バケット>
 ```
 - バックアップは `public` スキーマだけ（Documenso のデータはすべてここ。Supabase 管理の auth などは新しいプロジェクトに最初からある）。pg_dump は Postgres 17 のクライアントを使う（Supabase は 17）。Storage の中身は DB バックアップに含まれないので、`rclone copy` で別に取る。
 - **本番を復旧するときの下ごしらえ（復元テストで見つかった）:** 復元先の DB で、先に `drop schema public cascade; create schema public;` を実行し、続けて `create extension if not exists pg_trgm schema public;`（本番で `public` に入っている拡張機能を全部。`ops/restore-test.sh` が自動で調べて作る）を実行してから、目次から `public` の作成だけを外して復元する（`pg_restore -l db.dump | grep -v ' SCHEMA - public ' > toc.list` のあと `pg_restore -L toc.list --no-owner --no-acl -d <復元先> db.dump`）。ダンプに `CREATE SCHEMA public` が入っていて、復元先の `public` と衝突するため。これを省くと、`schema "public" already exists` と `gin_trgm_ops does not exist`（検索用の索引）で失敗する。
-- ★ **復元テスト（1回目は上の下ごしらえ不足で失敗。直して再実行待ち）:** `ops/restore-test.sh` が、本番 DB を週次と同じ手順でダンプ→暗号化→復号し、使い捨てのローカル Postgres に復元して、全テーブルの行数を本番と比べる（本番には書かない）。`OK: …テーブルの行数が一致` が出れば合格。結果を PR に書く。R2 まで通す確認は、GitHub Actions の "Run workflow" を1回手動で実行し、R2 に `db/db-YYYYMMDD.dump.enc` と `files/` ができたことを見る。
+- ✅ **復元テスト（2026-11-09 に合格）:** `ops/restore-test.sh` が、本番 DB を週次と同じ手順でダンプ→暗号化→復号し、使い捨てのローカル Postgres に復元して、全テーブルの行数を本番と比べる（本番には書かない）。`OK: …テーブルの行数が一致` が出れば合格。**結果: 54 テーブルの行数が一致（User 3 = 管理者1 + サービス用アカウント2）。1回目・2回目は下ごしらえの不足で失敗し、手順を直した。** 確認できたのは、暗号化したダンプをローカルの Postgres に復元できる範囲。R2 まで通す確認は、GitHub Actions の "Run workflow" を1回手動で実行し、R2 に `db/db-YYYYMMDD.dump.enc` と `files/` ができたことを見る。
 
 ## 4. テンプレートと送る組み合わせ
 入力元: Claude Docs「FDM・AIセキュリティ診断 契約書ひな形（下書き）」1〜5。**弁護士の確認が終わるまでは本番のお客様に送らない。** テンプレート名の頭に【下書き】を付ける。
