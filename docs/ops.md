@@ -39,11 +39,11 @@
 > 注意: `NEXT_PUBLIC_*` は Docker のビルド時に値が固まる設定の場合がある。Variables を変えても反映されないときは再ビルド（Redeploy）する。
 
 ## 2. 署名用の証明書（.p12）
-自己署名で始める。ファイルはリポジトリに置かない。
+自己署名で始める。ファイルはリポジトリに置かない。macOS では標準の `/usr/bin/openssl`（LibreSSL）を使う。Homebrew の OpenSSL 3 で作ると、Documenso が読めない形式になることがある。1Password への登録を含む一括コマンドは、PR の説明か作業ログを参照。
 ```bash
 openssl genrsa -out private.key 2048
 openssl req -new -x509 -key private.key -out certificate.crt -days 365 \
-  -subj "/C=JP/O=ムーア株式会社/CN=sign.mooores.com"
+  -subj "/C=JP/O=Mooore Inc./CN=sign.mooores.com"
 read -s -p "パスフレーズ: " CERT_PASS; echo
 openssl pkcs12 -export -out certificate.p12 -inkey private.key -in certificate.crt -password env:CERT_PASS
 rm private.key certificate.crt
