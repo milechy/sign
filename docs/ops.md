@@ -27,7 +27,7 @@
 
 ## 1. セットアップの順番（★ = あなたが実行する作業）
 
-1. ★ Supabase: 東京リージョンでプロジェクト作成。接続文字列を2つ控える（Transaction pooler = アプリ用、Direct = マイグレーション用）。Storage に**非公開**バケットを作り、S3 接続の鍵を発行。日次バックアップが有効なことを確認。
+1. ★ Supabase: 東京リージョンでプロジェクト作成。接続文字列を控える。アプリ用 = Transaction pooler（port 6543、末尾に `?pgbouncer=true`）。マイグレーション用とバックアップ用 = **Session pooler（port 5432）**。Supabase の Direct（db.<ref>.supabase.co）は IPv6 専用で、Railway と GitHub Actions から繋がらない可能性が高いので使わない。Storage に**非公開**バケットを作り、S3 接続の鍵を発行。日次バックアップが有効なことを確認。
 2. ★ Resend: `mail.mooores.com` を追加し、DNS に SPF・DKIM・DMARC を登録して Verified にする。API キー発行。
 3. ★ 署名証明書を作る（§2）。
 4. ★ 1Password の Dev に `mooore-sign` を作り、`.env.mooore.tpl` の項目を入れる。
