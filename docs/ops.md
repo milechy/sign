@@ -68,7 +68,9 @@ rm certificate.p12
 
 ## 3. バックアップと復元
 - Supabase の日次自動バックアップ（プラン依存。契約プランで保持日数を確認）。
-- 週1回（月曜 03:00 JST）: `.github/workflows/mooore-backup.yml` が、暗号化した `pg_dump` と Storage の中身を Cloudflare R2 に書き出す。手動実行は Actions の "Run workflow"。バックアップ先は Cloudflare R2 のバケット `mooore-sign-backup`（2026-11-09 作成、非公開、APAC）。`db/` は90日で自動削除するルール `expire-db-dumps-90d` を設定済み。`files/`（契約書 PDF の複製）は7年保存の対象なので期限を付けない。R2 の接続先は `https://b6d518fc9ad3c51d71c39426f531b1e8.r2.cloudflarestorage.com`（`R2_ENDPOINT`。バケット名は含めない）。**ワークフローを手動実行するには、`.github/workflows/mooore-backup.yml` が既定ブランチ（main）に入っている必要がある**（PR をマージしたあと）。fork では、Actions タブで一度「ワークフローを有効にする」操作が要る。
+- 週1回（月曜 03:00 JST）: `.github/workflows/mooore-backup.yml` が、暗号化した `pg_dump` と Storage の中身を Cloudflare R2 に書き出す。手動実行は Actions の "Run workflow"。バックアップ先は Cloudflare R2 のバケット `mooore-sign-backup`（2026-11-09 作成、非公開、APAC）。`db/` は90日で自動削除するルール `expire-db-dumps-90d` を設定済み。`files/`（契約書 PDF の複製）は7年保存の対象なので期限を付けない。R2 の接続先は `https://b6d518fc9ad3c51d71c39426f531b1e8.r2.cloudflarestorage.com`（`R2_ENDPOINT`。バケット名は含めない）。**ワークフローを手動実行するには、`.github/workflows/mooore-backup.yml` が既定ブランチ（main）に入っている必要がある**（PR をマージしたあと）。fork では、Actions タブで一度「ワークフローを有効にする」操作が要る（2026-11-09 時点では、すでに有効だった）。
+- ✅ **週次バックアップの実行（2026-11-09 に成功）:** 手動実行 → R2 の `db/db-20261109.dump.enc`（約200 kB）ができた。1回目は R2 への書き込みが `AccessDenied` で失敗。原因は、バケット限定のトークンでは rclone のバケット確認（作成）が拒否されること。`RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true` で直った。`files/` は、Storage にまだ契約書が無いので何もできない（空のバケットのため）。
+- **未確認:** R2 から落とした暗号化ダンプを、`BACKUP_PASSPHRASE` で復号して復元する、通しの確認。`restore-test.sh` は、本番から新しく取ったダンプで試している。
 - 復元（検証用の空の DB に対して）:
 ```bash
 rclone copyto R2:<bucket>/db/db-YYYYMMDD.dump.enc ./db.dump.enc

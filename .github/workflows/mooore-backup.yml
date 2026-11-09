@@ -45,6 +45,8 @@ jobs:
           RCLONE_CONFIG_SB_SECRET_ACCESS_KEY: ${{ secrets.SB_S3_SECRET_ACCESS_KEY }}
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          # バケット限定のトークンはバケットの作成・確認ができない。確認を省かないと AccessDenied になる
+          RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
           RCLONE_CONFIG_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
