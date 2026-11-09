@@ -19,7 +19,7 @@
 - 認証用の秘密鍵 = `NEXTAUTH_SECRET`
 - 暗号化キー = `NEXT_PRIVATE_ENCRYPTION_KEY` / `NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY`（各 32 文字以上のランダム）
 - DB = `NEXT_PRIVATE_DATABASE_URL`（プーラー）/ `NEXT_PRIVATE_DIRECT_DATABASE_URL`（直接）
-- SMTP = `NEXT_PRIVATE_SMTP_*`（Resend は `smtp-auth`、host `smtp.resend.com`、465、user `resend`、password は API キー）
+- メール = `NEXT_PRIVATE_SMTP_TRANSPORT=resend` ＋ `NEXT_PRIVATE_RESEND_API_KEY`（Resend の HTTP API）。差出人は `NEXT_PRIVATE_SMTP_FROM_NAME` / `_FROM_ADDRESS`。**SMTP（smtp.resend.com:465）は使わない**: Railway の Hobby プランは外向き SMTP を塞ぐため、Connection timeout になる（2026-11-09 に確認）
 - ファイル保存 = `NEXT_PUBLIC_UPLOAD_TRANSPORT=s3` ＋ `NEXT_PRIVATE_UPLOAD_*`（Supabase は `FORCE_PATH_STYLE=true`）
 - 署名証明書 = `NEXT_PRIVATE_SIGNING_LOCAL_FILE_CONTENTS`（base64）＋ `NEXT_PRIVATE_SIGNING_PASSPHRASE`
 - 新規登録の停止 = `NEXT_PUBLIC_DISABLE_SIGNUP=true`
