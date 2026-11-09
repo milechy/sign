@@ -29,5 +29,5 @@ NEXT_PRIVATE_SIGNING_PASSPHRASE=op://Dev/mooore-sign/SIGNING_PASSPHRASE
 NEXT_PRIVATE_SIGNING_REASON=ムーア株式会社 電子署名
 NEXT_PUBLIC_SIGNING_CONTACT_INFO=sign@mail.mooores.com
 DOCUMENSO_DISABLE_TELEMETRY=true
-# 最初の管理者を作ったあとに true にする（ops.md の手順 8）
-NEXT_PUBLIC_DISABLE_SIGNUP=true
+PORT=3000
+# NEXT_PUBLIC_DISABLE_SIGNUP=true は、最初の管理者を作ったあとに Railway へ足す（ops.md の手順 8）。ここでは入れない
