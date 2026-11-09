@@ -15,6 +15,18 @@
 | 日本語 UI | `packages/lib/translations/ja` あり。足りない画面は §10 で確認して記録する（未確認） |
 | ライセンス | AGPLv3。`LICENSE` を消さない。改変は fork に置く。ロゴ差し替えは商標ルール確認後（未確認） |
 
+## 0.5 指示書との差分（2026-11-09 時点）
+
+| 要求 | 状態 | 対応 |
+|---|---|---|
+| お客様の署名に二要素認証 | 設定は未（機能はある） | Documenso の「アクセス認証 = 2FA」は、**メールに届く確認コード**（アカウント不要）。**各テンプレートで有効にする**（§4）。2FA はドキュメント全体に掛かるので、ムーア側の署名者にも掛かる。テンプレートを作る段階で設定し、テスト送信で確認する |
+| 署名済み PDF を両者に送る | 済 | Documenso の完了メールが、署名者全員と送信者に署名済み PDF を添付する（ソースで確認: `send-document-completed-emails.handler.ts`） |
+| 署名済み PDF に署名証明書・監査ログを含める | **直した** | 組織の Preferences → Certificates で、証明書 = Yes（元から）、**監査ログ = No → Yes に変更**（チームは組織を引き継ぐ） |
+| ハッシュ値（SHA-256）を両者に送る | **足した** | Documenso は送らない。`ops/completion-worker.js` が、完了 Webhook を受けて署名済み PDF の SHA-256 を計算し、監査ログ PDF を添付して全員にメールする（テストあり）。**デプロイは未**（§6） |
+| 新規登録の停止 | 済 | `NEXT_PUBLIC_DISABLE_SIGNUP=true`。`/signup` は `/signin` へ転送、登録 API は 403 |
+| バックアップと復元の確認 | **直した・復元テストは未実行** | 週次ワークフローの不具合を2つ直した（`pg_dump` が 16 で Postgres 17 に失敗する／Supabase 管理スキーマが復元で衝突する）。復元テスト `ops/restore-test.sh` を用意。R2 と GitHub Secrets は未設定で、ワークフローも未実行（§3） |
+| テンプレート7つ・PDF 生成・登録 | 未 | 元の文面（`templates/source/contracts.md`）が必要。着手前 |
+
 ### 環境変数（`.env.example` と指示書の名前の違い）
 - 認証用の秘密鍵 = `NEXTAUTH_SECRET`
 - 暗号化キー = `NEXT_PRIVATE_ENCRYPTION_KEY` / `NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY`（各 32 文字以上のランダム）
@@ -64,7 +76,8 @@ openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_PASSPHRASE -in db.dump.enc 
 pg_restore --no-owner -d "<復元先 DB の接続文字列>" db.dump
 rclone copy R2:<bucket>/files <復元先バケット>
 ```
-- ★ **一度実際に復元して試す。結果を PR に書く。** 本番に上書きする前に、必ず別の DB で試す。
+- バックアップは `public` スキーマだけ（Documenso のデータはすべてここ。Supabase 管理の auth などは新しいプロジェクトに最初からある）。pg_dump は Postgres 17 のクライアントを使う（Supabase は 17）。Storage の中身は DB バックアップに含まれないので、`rclone copy` で別に取る。
+- ★ **復元テスト（まだ未実行）:** `ops/restore-test.sh` が、本番 DB を週次と同じ手順でダンプ→暗号化→復号し、使い捨てのローカル Postgres に復元して、全テーブルの行数を本番と比べる（本番には書かない）。`OK: …テーブルの行数が一致` が出れば合格。結果を PR に書く。R2 まで通す確認は、GitHub Actions の "Run workflow" を1回手動で実行し、R2 に `db/db-YYYYMMDD.dump.enc` と `files/` ができたことを見る。
 
 ## 4. テンプレートと送る組み合わせ
 入力元: Claude Docs「FDM・AIセキュリティ診断 契約書ひな形（下書き）」1〜5。**弁護士の確認が終わるまでは本番のお客様に送らない。** テンプレート名の頭に【下書き】を付ける。
@@ -79,7 +92,10 @@ rclone copy R2:<bucket>/files <復元先バケット>
 | 4 | 【下書き】診断作業の許可書 | 診断のときだけ |
 | 5 | 【下書き】ムーア環境運用の同意書 | ムーア環境で運用するときだけ |
 
-署名の順番は**お客様が先、ムーアが後**。完了後は両者に完了メールと署名済み PDF が届く。
+署名の順番は**お客様が先、ムーアが後**。完了後は両者に完了メールと署名済み PDF（証明書ページ・監査ログ付き）が届き、続けてハッシュ値と監査ログのメールが届く（§6）。
+
+**二要素認証（各テンプレートで必ず有効にする）:** テンプレートの設定で「アクセス認証（Access authentication）」を「2FA を要求」にする。署名者は、メールに届く確認コードを入れて初めて書類を開ける（アカウント不要）。ドキュメント全体の設定なので、ムーアの署名者にも掛かる。画面の名前は版で違うことがある。**テスト送信で、確認コードのメールが `sign@mail.mooores.com` から届き、コードなしでは開けないことを確認する**（確認は未）。
+> なお「アクション認証」の 2FA は、アカウントの認証アプリ（TOTP）が前提で、アカウントを持たないお客様には使えない。
 
 | 場面 | 送る組み合わせ |
 |---|---|
@@ -102,11 +118,16 @@ rclone copy R2:<bucket>/files <復元先バケット>
 - タイムスタンプを付けない場合は事務処理規程で要件を満たす。ひな形: `docs/denchoho-kitei.md`（税理士の確認が必要）。
 - **Google ドライブへの自動保存:** 最初は手で保存する。署名完了の Slack 通知を見たら、署名済み PDF と監査ログをダウンロードし、所定のフォルダに `取引年月日_取引先_金額.pdf` で保存する。自動化（Webhook → 関数 → Drive）は件数が増えてから。
 
-## 6. 通知と請求（最初は手作業）
-1. Documenso → Settings → Webhooks に、`ops/slack-notify-worker.js` を置いた関数の URL を登録。イベントは `DOCUMENT_COMPLETED`、Secret を設定。
-2. ★ 関数（Cloudflare Worker 想定）に `SLACK_WEBHOOK_URL` と `WEBHOOK_SECRET` を入れる。
-3. 署名完了が Slack に流れる（取引先・種別・金額はタイトルから）。
-4. 個別契約なら Stripe で請求書を手作業で作る。月の契約が5件を超えたら自動連携を考える。
+## 6. 完了通知・ハッシュ値・監査ログ・請求
+署名が完了すると `ops/completion-worker.js`（Cloudflare Worker）が、全員にハッシュ値と監査ログをメールし、Slack に通知する。
+1. ★ Documenso → Settings → API Tokens でトークンを作る（名前 `completion-worker`）。1Password の `DOCUMENSO_API_TOKEN` に入れる。
+2. ★ Worker を作って環境変数（Secrets）を入れる: `WEBHOOK_SECRET`（自分で決めた長い文字列）、`DOCUMENSO_URL=https://sign.mooores.com`、`DOCUMENSO_API_TOKEN`、`RESEND_API_KEY`（送信専用。署名サイト用と同じ物でよい）、`MAIL_FROM=ムーア株式会社 <sign@mail.mooores.com>`、`SLACK_WEBHOOK_URL`。
+3. ★ Documenso → Settings → Webhooks に、Worker の URL・イベント `DOCUMENT_COMPLETED`・同じ Secret を登録（ヘッダー `X-Documenso-Secret` で届くことはソースで確認済み）。
+4. テスト: 自分あてに1通通す。全員にメール（ハッシュ値＋監査ログ）が届き、ハッシュ値が下のコマンドの結果と一致することを確認する。
+   `shasum -a 256 <届いた署名済み PDF>`
+5. 個別契約なら Stripe で請求書を手作業で作る。月の契約が5件を超えたら自動連携を考える。
+- 動作確認済みの範囲: `node --test ops/completion-worker.test.mjs`（API 呼び出しを模擬）。実際の Documenso・Resend・Slack との通しは未確認。
+- 失敗すると Worker が 500 を返し、Documenso が再送する。
 
 ## 7. 日々の運用
 - 送信: Templates → Use → 送信前に金額などを入力 → 宛先を入れて送る。
@@ -123,7 +144,10 @@ Supabase（Pro $25）／ Resend（無料〜$20）／ Railway（Hobby $5 + 従量
 - [ ] メールが Gmail と Outlook で迷惑メールに入らない
 - [ ] バックアップから復元できた
 - [ ] 新規登録画面から登録できない
-- [ ] Slack 通知が届く（Webhook の Secret ヘッダー名を公式の Webhook Verification ページで確認）
+- [ ] 完了後に全員へハッシュ値＋監査ログのメールが届き、ハッシュ値が PDF と一致する
+- [ ] Slack 通知が届く
+- [ ] 二要素認証: 確認コードなしでは書類を開けない
+- [ ] 署名済み PDF に署名証明書と監査ログのページが付いている
 
 ## 10. 日本語 UI で足りない画面
 （動かして確認したら、ここに書く。未確認）

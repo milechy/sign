@@ -17,8 +17,12 @@ jobs:
     steps:
       - name: Install clients
         run: |
+          # Supabase は Postgres 17。pg_dump はサーバーと同じかそれ以上のバージョンが必要（Ubuntu 標準の 16 では失敗する）
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-16 rclone
+          sudo apt-get install -y -qq postgresql-client-17 rclone
       - name: Dump DB (encrypted)
         env:
           BACKUP_DB_URL: ${{ secrets.BACKUP_DB_URL }}
@@ -26,13 +30,16 @@ jobs:
         run: |
           set -euo pipefail
           D=$(date -u +%Y%m%d)
-          pg_dump "$BACKUP_DB_URL" --no-owner --format=custom \
+          # public スキーマだけ: Documenso のデータはすべてここ。auth など Supabase 管理のスキーマは新しいプロジェクトに最初からある
+          pg_dump "$BACKUP_DB_URL" --schema=public --no-owner --no-acl --format=custom \
             | openssl enc -aes-256-cbc -pbkdf2 -pass env:BACKUP_PASSPHRASE -out "db-$D.dump.enc"
           echo "D=$D" >> "$GITHUB_ENV"
       - name: Upload dump and mirror storage to R2
         env:
           RCLONE_CONFIG_SB_TYPE: s3
           RCLONE_CONFIG_SB_PROVIDER: Other
+          RCLONE_CONFIG_SB_REGION: ap-northeast-1
+          RCLONE_CONFIG_SB_FORCE_PATH_STYLE: "true"
           RCLONE_CONFIG_SB_ENDPOINT: ${{ secrets.SB_S3_ENDPOINT }}
           RCLONE_CONFIG_SB_ACCESS_KEY_ID: ${{ secrets.SB_S3_ACCESS_KEY_ID }}
           RCLONE_CONFIG_SB_SECRET_ACCESS_KEY: ${{ secrets.SB_S3_SECRET_ACCESS_KEY }}
