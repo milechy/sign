@@ -27,4 +27,5 @@ NEXT_PRIVATE_SIGNING_REASON=ムーア株式会社 電子署名
 NEXT_PUBLIC_SIGNING_CONTACT_INFO=sign@mail.mooores.com
 DOCUMENSO_DISABLE_TELEMETRY=true
 PORT=3000
-# NEXT_PUBLIC_DISABLE_SIGNUP=true は、最初の管理者を作ったあとに Railway へ足す（ops.md の手順 8）。ここでは入れない
+# 最初の管理者を作ったので、新規登録を止める（2026-11-09 に有効化）
+NEXT_PUBLIC_DISABLE_SIGNUP=true
