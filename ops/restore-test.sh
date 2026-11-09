@@ -9,7 +9,14 @@ trap '"$B/pg_ctl" -D "$T/pg" stop -m immediate >/dev/null 2>&1 || true; rm -rf "
 openssl enc -d -aes-256-cbc -pbkdf2 -pass env:PASS -in "$T/db.enc" -out "$T/db.dump"
 "$B/initdb" -D "$T/pg" -A trust -U postgres >/dev/null && "$B/pg_ctl" -D "$T/pg" -o "-p 55432 -k $T" -l "$T/log" -w start >/dev/null
 L="$B/psql -h $T -p 55432 -U postgres -qAt"
-$L -c 'create database restoretest' postgres && "$B/pg_restore" --no-owner --no-acl -h "$T" -p 55432 -U postgres -d restoretest "$T/db.dump"
+$L -c 'create database restoretest' postgres
+# 復元先の下ごしらえ（本番復旧でも同じ）: ① 空の public を作り直す ② 本番で public に入っている拡張機能（pg_trgm など）を先に作る。
+#   public だけのダンプには拡張機能そのものが入らず、これを省くと gin_trgm_ops の索引で復元が失敗する
+$L -d restoretest -c 'drop schema public cascade; create schema public'
+for e in $("$B/psql" "$URL" -qAt -c "select e.extname from pg_extension e join pg_namespace n on n.oid=e.extnamespace where n.nspname='public'"); do
+  $L -d restoretest -c "create extension if not exists \"$e\" schema public"
+done
+"$B/pg_restore" --no-owner --no-acl --exit-on-error -h "$T" -p 55432 -U postgres -d restoretest "$T/db.dump"
 count() { # $1=接続先 $2..=psql 引数。public の全テーブルの「名前 行数」を並べる
   local tabs; tabs=$("${@:2}" -c "select tablename from pg_tables where schemaname='public' order by 1")
   for t in $tabs; do echo "$t $("${@:2}" -c "select count(*) from public.\"$t\"")"; done

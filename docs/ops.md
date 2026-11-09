@@ -77,7 +77,8 @@ pg_restore --no-owner -d "<復元先 DB の接続文字列>" db.dump
 rclone copy R2:<bucket>/files <復元先バケット>
 ```
 - バックアップは `public` スキーマだけ（Documenso のデータはすべてここ。Supabase 管理の auth などは新しいプロジェクトに最初からある）。pg_dump は Postgres 17 のクライアントを使う（Supabase は 17）。Storage の中身は DB バックアップに含まれないので、`rclone copy` で別に取る。
-- ★ **復元テスト（まだ未実行）:** `ops/restore-test.sh` が、本番 DB を週次と同じ手順でダンプ→暗号化→復号し、使い捨てのローカル Postgres に復元して、全テーブルの行数を本番と比べる（本番には書かない）。`OK: …テーブルの行数が一致` が出れば合格。結果を PR に書く。R2 まで通す確認は、GitHub Actions の "Run workflow" を1回手動で実行し、R2 に `db/db-YYYYMMDD.dump.enc` と `files/` ができたことを見る。
+- **本番を復旧するときの下ごしらえ（復元テストで見つかった）:** 復元先の DB で、先に `drop schema public cascade; create schema public;` を実行し、続けて `create extension if not exists pg_trgm schema public;`（本番で `public` に入っている拡張機能を全部。`ops/restore-test.sh` が自動で調べて作る）を実行してから `pg_restore --no-owner --no-acl` する。これを省くと、`schema "public" already exists` と `gin_trgm_ops does not exist`（検索用の索引）で失敗する。
+- ★ **復元テスト（1回目は上の下ごしらえ不足で失敗。直して再実行待ち）:** `ops/restore-test.sh` が、本番 DB を週次と同じ手順でダンプ→暗号化→復号し、使い捨てのローカル Postgres に復元して、全テーブルの行数を本番と比べる（本番には書かない）。`OK: …テーブルの行数が一致` が出れば合格。結果を PR に書く。R2 まで通す確認は、GitHub Actions の "Run workflow" を1回手動で実行し、R2 に `db/db-YYYYMMDD.dump.enc` と `files/` ができたことを見る。
 
 ## 4. テンプレートと送る組み合わせ
 入力元: Claude Docs「FDM・AIセキュリティ診断 契約書ひな形（下書き）」1〜5。**弁護士の確認が終わるまでは本番のお客様に送らない。** テンプレート名の頭に【下書き】を付ける。
