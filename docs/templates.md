@@ -40,14 +40,15 @@ op run --env-file=.env.mooore.tools.tpl -- scripts/upload-templates --dry-run   
 2. `scripts/build-templates` → `scripts/check-templates`。
 3. `op run --env-file=.env.mooore.tools.tpl -- scripts/upload-templates`（8つ）。作り直すときは `--replace`（同名のテンプレートを削除してから作る）。1つだけなら `--only 03a_trial`。
 - 登録の中身: 種類 = TEMPLATE、受信者 = お客様（署名者・1番目、宛先は仮の `customer@example.com`）→ ムーア（署名者・2番目、`hkobayashi@mooores.com`）、署名順 = 順番に（SEQUENTIAL）、言語 = 日本語、**アクセス認証 = 二要素認証（`TWO_FACTOR_AUTH`）**、入力欄 = `templates/out/*.fields.json` の座標。
-- **未確認:** API での登録は、まだ実行していない（トークンが無い）。初回の実行で、返り値のエラーを見て直す。
+- **確認済み（2026-11-10）:** 8つとも、初回の実行でエラーなく登録できた。画面で、一覧に8つ（名前の頭に【下書き】、非公開）、NDA と個別契約書（お試し）の中身（ソース PDF、署名順序が有効、グループ1 = お客様、グループ2 = ムーア、言語 = 日本語、**ドキュメントへのアクセス = 2要素認証を必須にする**、入力欄の数と名前と位置が PDF の空欄の上）を確認した。残りの6つの中身は、同じ手順で作ったが、画面では確認していない。
+- トークンは `template-upload`（3か月）。1Password の `mooore-sign/DOCUMENSO_API_TOKEN`。
 
 ### 画面で（API が使えないとき）
 Templates → Create template → PDF（`templates/out/<名前>.pdf`）をアップロード → 受信者を2人（お客様を1番、ムーアを2番、順番に署名）→ 入力欄を `templates/out/<名前>.fields.json` の一覧（ページ・位置・大きさ・種類・入力する人）のとおりに置く → 設定で「アクセス認証」を二要素認証にする。
 
 ## 二要素認証
 - Documenso の「アクセス認証 = 2FA」は、**メールに届く確認コード**（アカウント不要）。署名者は、コードを入れて初めて書類を開ける。ドキュメント全体の設定なので、**ムーア側の署名者にも掛かる**。
-- API で登録したテンプレートは、`globalAccessAuth: ["TWO_FACTOR_AUTH"]` が入っている。**テスト送信で、確認コードのメールが届き、コードなしでは書類が開けないことを確かめる**（未確認）。
+- API で登録したテンプレートは、`globalAccessAuth: ["TWO_FACTOR_AUTH"]` が入っている（NDA の設定画面で、「2要素認証を必須にする」が入っていることを確認した）。**テスト送信で、確認コードのメールが届き、コードなしでは書類が開けないことを確かめる**（未確認）。
 
 ## 送り方
 | 場面 | 送る組み合わせ |
