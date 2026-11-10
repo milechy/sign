@@ -79,3 +79,4 @@ tmp/
 templates/.venv/
 templates/out/
 __pycache__/
+templates/config.local.json

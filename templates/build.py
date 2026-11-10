@@ -89,6 +89,20 @@ def split_source(text: str) -> dict:
     return out
 
 
+def load_cfg() -> dict:
+    """config.json に、コミットしない config.local.json（住所など）を重ねる。"""
+    cfg = json.load(open(ROOT / "config.json", encoding="utf-8"))
+    local = ROOT / "config.local.json"
+    if local.exists():
+        over = json.load(open(local, encoding="utf-8")).get("values", {})
+        unknown = set(over) - set(cfg["values"])
+        if unknown:
+            raise BuildError(f"config.local.json に、config.json にないキー: {sorted(unknown)}")
+        cfg["values"].update(over)
+        print(f"config.local.json を重ねた: {sorted(over)}", file=sys.stderr)
+    return cfg
+
+
 def load_rules():
     return json.load(open(ROOT / "fields.json", encoding="utf-8"))["rules"]
 
@@ -294,7 +308,7 @@ def cmd_parts(_):
 
 
 def cmd_build(a):
-    cfg = json.load(open(ROOT / "config.json", encoding="utf-8"))
+    cfg = load_cfg()
     res = build_all(cfg, OUT, strict=a.strict)
     for k, v in res.items():
         m = v["meta"]
@@ -303,7 +317,7 @@ def cmd_build(a):
 
 def cmd_check(a):
     errs = []
-    cfg = json.load(open(ROOT / "config.json", encoding="utf-8"))
+    cfg = load_cfg()
     docs = split_source(SRC.read_text(encoding="utf-8"))
     for k, v in docs.items():
         p = PARTS / f"{k}.md"
@@ -325,7 +339,8 @@ def cmd_check(a):
                 i = next((i for i, (x, y) in enumerate(zip(pdf_text, exp)) if x != y), min(len(pdf_text), len(exp)))
                 errs.append(f"{k}: PDF の本文と原文が違う（{i}文字目）\n  PDF: …{pdf_text[max(0,i-20):i+30]}\n  原文: …{exp[max(0,i-20):i+30]}")
             # ［ が残っていないこと（未設定の設定値を除く）
-            left = [t for t in TOKEN.findall(exp) if t not in [cfg['values'][u] for u in v['meta']['unset_config']]]
+            unset_vals = [cfg['values'][u] for u in v['meta']['unset_config']]
+            left = [t for t in TOKEN.findall(exp) if not any(t in uv for uv in unset_vals)]
             if left:
                 errs.append(f"{k}: ［…］ が残っている: {left[:3]}")
             total_tokens += sum(1 for f in v["meta"]["fields"] if f["token"])
