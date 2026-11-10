@@ -2,7 +2,7 @@
 name: mooore-check
 on:
   pull_request:
-    paths: ["ops/**", "scripts/**", "templates/**", ".github/workflows/mooore-*.yml", ".env.mooore.tpl"]
+    paths: ["ops/**", "scripts/**", "templates/**", ".github/workflows/mooore-*.yml", ".env.mooore*.tpl"]
   workflow_dispatch:
 jobs:
   check:

@@ -11,5 +11,6 @@ step "シェルの構文（bash -n）" bash -c 'for f in ops/*.sh scripts/build-
 step "upload-templates の構文" node --check scripts/upload-templates
 step "ops のテスト（node --test）" node --test ops/*.test.mjs
 step "バックアップのワークフローの YAML" python3 -c "import yaml; yaml.safe_load(open('.github/workflows/mooore-backup.yml'))"
-step ".env.mooore.tpl に平文の秘密がない" bash -c '! grep -vE "^\s*(#|$)" .env.mooore.tpl | grep -vE "=op://" | grep -iE "(SECRET|PASSWORD|API_?KEY|TOKEN|PASSPHRASE|_URL=postgres)"'
+step ".env.mooore*.tpl に平文の秘密がない" bash -c '! cat .env.mooore*.tpl | grep -vE "^\s*(#|$)" | grep -vE "=op://" | grep -iE "(SECRET|PASSWORD|API_?KEY|TOKEN|PASSPHRASE|_URL=postgres)"'
+step "Railway へ送る .tpl に、手元用の鍵（DOCUMENSO_API_TOKEN）が入っていない" bash -c '! grep -q DOCUMENSO_API_TOKEN .env.mooore.tpl'
 step "契約書テンプレート（分割・分類・本文の突き合わせ・欄の位置・設定の反映）" scripts/check-templates "$@"

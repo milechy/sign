@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 契約書テンプレートを Documenso に登録する（API: POST /api/v2/envelope/create）。
-//   op run --env-file=.env.mooore.tpl -- scripts/upload-templates [--dry-run] [--only 03a_trial] [--replace] [--bundle trial]
+//   op run --env-file=.env.mooore.tools.tpl -- scripts/upload-templates [--dry-run] [--only 03a_trial] [--replace] [--bundle trial]
 // 必要な環境変数: DOCUMENSO_API_TOKEN（Documenso の Settings → API Tokens）、DOCUMENSO_URL（省略時 https://sign.mooores.com）
 // 入力: scripts/build-templates が作る templates/out/*.pdf と *.fields.json
 //  --replace  同じ名前のテンプレートがあれば、削除してから作り直す
@@ -68,7 +68,7 @@ async function upload(title, docs) {
 }
 
 async function main() {
-  if (!flag("--dry-run") && !TOKEN) throw new Error("DOCUMENSO_API_TOKEN が無い（op run --env-file=.env.mooore.tpl -- で渡す）");
+  if (!flag("--dry-run") && !TOKEN) throw new Error("DOCUMENSO_API_TOKEN が無い（op run --env-file=.env.mooore.tools.tpl -- で渡す）");
   const b = val("--bundle");
   if (b) { if (!BUNDLES[b]) throw new Error(`--bundle は ${Object.keys(BUNDLES)} のどれか`); return upload(BUNDLES[b].title, BUNDLES[b].docs); }
   const names = fs.readdirSync(OUT).filter((f) => f.endsWith(".fields.json")).map((f) => f.replace(".fields.json", "")).sort();

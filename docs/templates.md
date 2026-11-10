@@ -8,7 +8,7 @@
 scripts/build-templates          # 原文 → 8つに分割（templates/parts/）→ PDF と入力欄の座標（templates/out/）。何度でも作り直せる
 scripts/check-templates          # 分割・［…］の分類・原文と PDF の本文の突き合わせ・欄の位置・設定の反映
 scripts/check                    # 上に加えて、ops/ のテストやシェルの構文など、運用部品をまとめて検査（CI でも走る）
-op run --env-file=.env.mooore.tpl -- scripts/upload-templates --dry-run   # 登録の中身だけ確認（通信しない）
+op run --env-file=.env.mooore.tools.tpl -- scripts/upload-templates --dry-run   # 登録の中身だけ確認（通信しない）
 ```
 必要な道具: Python 3、Google Chrome（`CHROME_BIN` で指定も可）、Noto Sans/Serif CJK JP（フォント）。`scripts/build-templates` が `templates/.venv` を自動で作る。
 
@@ -38,7 +38,7 @@ op run --env-file=.env.mooore.tpl -- scripts/upload-templates --dry-run   # 登�
 ### API で（おすすめ）
 1. ★ Documenso → Settings → API Tokens でトークンを作り、1Password の `mooore-sign` に `DOCUMENSO_API_TOKEN` として入れる。
 2. `scripts/build-templates` → `scripts/check-templates`。
-3. `op run --env-file=.env.mooore.tpl -- scripts/upload-templates`（8つ）。作り直すときは `--replace`（同名のテンプレートを削除してから作る）。1つだけなら `--only 03a_trial`。
+3. `op run --env-file=.env.mooore.tools.tpl -- scripts/upload-templates`（8つ）。作り直すときは `--replace`（同名のテンプレートを削除してから作る）。1つだけなら `--only 03a_trial`。
 - 登録の中身: 種類 = TEMPLATE、受信者 = お客様（署名者・1番目、宛先は仮の `customer@example.com`）→ ムーア（署名者・2番目、`hkobayashi@mooores.com`）、署名順 = 順番に（SEQUENTIAL）、言語 = 日本語、**アクセス認証 = 二要素認証（`TWO_FACTOR_AUTH`）**、入力欄 = `templates/out/*.fields.json` の座標。
 - **未確認:** API での登録は、まだ実行していない（トークンが無い）。初回の実行で、返り値のエラーを見て直す。
 
