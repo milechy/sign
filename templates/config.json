@@ -1,0 +1,28 @@
+{
+  "draft_mark": true,
+  "draft_mark_text": "下書き（専門家確認前）",
+  "values": {
+    "nda_term_years": "2",
+    "nda_survival_years": "3",
+    "court": "東京地方裁判所",
+    "liability_cap_months": "3",
+    "liability_cap_data_months": "12",
+    "breach_notice_hours": "24",
+    "record_retention_years": "7",
+    "objection_days": "7",
+    "diag_delete_days": "30",
+    "reimburse_pay_days": "30",
+    "min_term_months": "3",
+    "cancel_notice_months": "1",
+    "moore_address": "［小林が記入］",
+    "moore_representative": "［小林が記入］",
+    "reconfirm_months": "3",
+    "advisor_base_fee": "3万",
+    "advisor_rate_consult": "2万",
+    "advisor_rate_standard": "3万",
+    "advisor_rate_pro": "5万",
+    "advisor_visit_half": "8万",
+    "advisor_visit_day": "15万",
+    "advisor_record_minutes": "15"
+  }
+}

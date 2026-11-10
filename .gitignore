@@ -74,3 +74,9 @@ tmp/
 
 # opencode
 .opencode/package-lock.json
+
+# 契約書テンプレートの生成物（scripts/build-templates で作り直せる）
+templates/.venv/
+templates/out/
+__pycache__/
+templates/config.local.json

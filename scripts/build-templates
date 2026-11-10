@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# 契約書ひな形の PDF を作り直す（何度でも実行できる）。入力: templates/source/contracts.md, templates/config.json, templates/fields.json
+# 出力: templates/parts/*.md（分割）、templates/out/*.pdf と *.fields.json（入力欄の座標）
+# 使い方: scripts/build-templates [--strict]   （--strict: config.json の未記入があれば失敗）
+set -euo pipefail
+cd "$(dirname "$0")/../templates"
+[ -x .venv/bin/python ] || python3 -m venv .venv
+.venv/bin/pip install -q -r requirements.txt
+.venv/bin/python build.py parts
+.venv/bin/python build.py build "$@"

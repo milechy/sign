@@ -1,0 +1,77 @@
+#!/usr/bin/env node
+// 契約書テンプレートを Documenso に登録する（API: POST /api/v2/envelope/create）。
+//   op run --env-file=.env.mooore.tools.tpl -- scripts/upload-templates [--dry-run] [--only 03a_trial] [--replace] [--bundle trial]
+// 必要な環境変数: DOCUMENSO_API_TOKEN（Documenso の Settings → API Tokens）、DOCUMENSO_URL（省略時 https://sign.mooores.com）
+// 入力: scripts/build-templates が作る templates/out/*.pdf と *.fields.json
+//  --replace  同じ名前のテンプレートがあれば、削除してから作り直す
+//  --bundle trial  NDA・基本契約・個別契約（お試し）の3つを、1つのテンプレート（3つの PDF）にして登録する
+const fs = require("fs");
+const path = require("path");
+
+const OUT = path.join(__dirname, "..", "templates", "out");
+const URL_BASE = process.env.DOCUMENSO_URL || "https://sign.mooores.com";
+const TOKEN = process.env.DOCUMENSO_API_TOKEN;
+const args = process.argv.slice(2);
+const flag = (n) => args.includes(n);
+const val = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
+const RECIPIENTS = [
+  { who: "customer", email: "customer@example.com", name: "お客様", signingOrder: 1 }, // 送るときに実際の宛先へ置き換える
+  { who: "moore", email: "hkobayashi@mooores.com", name: "ムーア株式会社", signingOrder: 2 },
+];
+const BUNDLES = { trial: { title: "【下書き】お試し一式（NDA＋基本契約＋個別契約（お試し））", docs: ["01_nda", "02_master", "03a_trial"] } };
+
+function load(name) {
+  return JSON.parse(fs.readFileSync(path.join(OUT, `${name}.fields.json`), "utf8"));
+}
+
+function field(f, identifier) {
+  const o = { identifier, type: f.type, page: f.page, positionX: f.x_pct, positionY: f.y_pct, width: f.w_pct, height: f.h_pct };
+  if (f.type === "TEXT") o.fieldMeta = { type: "text", label: f.name, placeholder: f.name, required: true };
+  return o;
+}
+
+// docs: 登録する書面の名前の並び（PDF の並び順＝identifier）
+function payloadFor(title, docs) {
+  const metas = docs.map(load);
+  const recipients = RECIPIENTS.map(({ who, ...r }) => ({
+    ...r, role: "SIGNER",
+    fields: metas.flatMap((m, idx) => m.fields.filter((f) => f.who === who).map((f) => field(f, idx))),
+  }));
+  return {
+    title, type: "TEMPLATE",
+    globalAccessAuth: ["TWO_FACTOR_AUTH"], // 署名者は、メールに届く確認コードを入れて初めて書類を開ける
+    meta: { signingOrder: "SEQUENTIAL", language: "ja" },
+    recipients,
+  };
+}
+
+async function api(method, p, body) {
+  const r = await fetch(`${URL_BASE}/api/v2${p}`, { method, headers: { Authorization: TOKEN, ...(body && !(body instanceof FormData) ? { "content-type": "application/json" } : {}) }, body: body instanceof FormData ? body : body && JSON.stringify(body) });
+  const t = await r.text();
+  if (!r.ok) throw new Error(`${method} ${p} → ${r.status} ${t.slice(0, 300)}`);
+  return t ? JSON.parse(t) : {};
+}
+
+async function upload(title, docs) {
+  const payload = payloadFor(title, docs);
+  const nfields = payload.recipients.map((r) => r.fields.length);
+  if (flag("--dry-run")) return console.log(`[dry-run] ${title}: PDF ${docs.length}個, 入力欄 ${nfields.join(" + ")}, 受信者 ${payload.recipients.length}, 2FA ${payload.globalAccessAuth}`);
+  if (flag("--replace")) {
+    const found = await api("GET", `/envelope?type=TEMPLATE&query=${encodeURIComponent(title)}`);
+    for (const e of (found.data || []).filter((e) => e.title === title)) { await api("POST", "/envelope/delete", { envelopeId: e.id }); console.log(`削除: ${title} (${e.id})`); }
+  }
+  const fd = new FormData();
+  fd.append("payload", JSON.stringify(payload));
+  for (const d of docs) fd.append("files", new Blob([fs.readFileSync(path.join(OUT, `${d}.pdf`))], { type: "application/pdf" }), `${d}.pdf`);
+  const res = await api("POST", "/envelope/create", fd);
+  console.log(`登録: ${title} → ${res.id}`);
+}
+
+async function main() {
+  if (!flag("--dry-run") && !TOKEN) throw new Error("DOCUMENSO_API_TOKEN が無い（op run --env-file=.env.mooore.tools.tpl -- で渡す）");
+  const b = val("--bundle");
+  if (b) { if (!BUNDLES[b]) throw new Error(`--bundle は ${Object.keys(BUNDLES)} のどれか`); return upload(BUNDLES[b].title, BUNDLES[b].docs); }
+  const names = fs.readdirSync(OUT).filter((f) => f.endsWith(".fields.json")).map((f) => f.replace(".fields.json", "")).sort();
+  for (const n of names.filter((n) => !val("--only") || n === val("--only"))) await upload(load(n).title, [n]);
+}
+main().catch((e) => { console.error("NG:", e.message); process.exit(1); });

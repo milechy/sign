@@ -1,0 +1,19 @@
+# ムーアの運用部品（ops/・scripts/・templates/）を変えた PR で、scripts/check を走らせる。
+name: mooore-check
+on:
+  pull_request:
+    paths: ["ops/**", "scripts/**", "templates/**", ".github/workflows/mooore-*.yml", ".env.mooore*.tpl"]
+  workflow_dispatch:
+jobs:
+  check:
+    if: github.repository_owner != 'documenso'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Install fonts, PyYAML and the template tooling
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk python3-yaml
+          python3 -m venv templates/.venv && templates/.venv/bin/pip install -q -r templates/requirements.txt
+      - run: scripts/check
