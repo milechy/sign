@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# 分割・［…］の分類・原文と PDF の本文の突き合わせ・入力欄の位置・設定の反映を、まとめて確かめる。
+set -euo pipefail
+cd "$(dirname "$0")/../templates"
+[ -x .venv/bin/python ] || { python3 -m venv .venv; .venv/bin/pip install -q -r requirements.txt; }
+.venv/bin/python build.py check "$@"
